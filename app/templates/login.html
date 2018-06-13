@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}
+请登录
+{% endblock %}
+
+{% block main %}
+<form class="form-signin" action="/login" method="post">
+    <h1 class="h3 pt-4 mb-3 font-weight-normal">请登录</h1>
+    <label for="username" class="sr-only">用户名</label>
+    <input type="text" id="username" name="username" class="form-control mb-1" placeholder="用户名" required autofocus>
+
+    <label for="inputPassword" class="sr-only">Password</label>
+    <input type="password" id="inputPassword" name="password" class="form-control mb-3" placeholder="Password" required>
+
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error|e }}
+    </div>
+    {% endif %}
+    <button class="btn btn-lg btn-primary btn-block" type="submit">登陆</button>
+</form>
+{% endblock %}

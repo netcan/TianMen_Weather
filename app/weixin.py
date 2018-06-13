@@ -1,7 +1,8 @@
 from functools import wraps
 from app.models import Token, Template, User
-import requests, json, hashlib, re
 from app import db, config
+from collections import namedtuple
+import requests, json, hashlib, re
 import time
 import xml.etree.ElementTree as ET
 
@@ -31,7 +32,6 @@ class Message:
                                              getattr(self, 'ToUserName', None),
                                              int(time.time()),
                                              getattr(self, 'Content', None))
-
 
 
 class WeiXin:
@@ -82,20 +82,39 @@ class WeiXin:
 
     @access_token_required
     def get_templates(self, update=False):
+        Templte = namedtuple('Template', ['title', 'content', 'industry'])
         if update or Template.query.count() == 0:
             res = requests.get('https://api.weixin.qq.com/cgi-bin/template/get_all_private_template', dict(
                 access_token=self.token.access_token
             )).json()
             for template_item in res["template_list"]:
-                if Template.query.filter_by(template_id=template_item["template_id"]).first() is None:
+                template = Template.query.filter_by(template_id=template_item["template_id"]).first()
+                if template is None:
                     template = Template(template_id=template_item['template_id'],
-                                        content=template_item['content'])
+                                        content=template_item['content'],
+                                        title=template_item['title'],
+                                        industry='{} - {}'.format(template_item["primary_industry"],
+                                                                  template_item["deputy_industry"]))
                     db.session.add(template)
+                else:
+                    template.template_id = template_item["template_id"]
+                    template.content = template_item["content"]
+                    template.title = template_item["title"]
+                    template.industry = '{} - {}'.format(template_item["primary_industry"],
+                                                         template_item["deputy_industry"])
+
             db.session.commit()
-            return {template['template_id']: template['content']
+
+            return {template['template_id']: Templte(title=template['title'],
+                                                     content=template['content'],
+                                                     industry='{} - {}'.format(
+                                                         template_item["primary_industry"],
+                                                         template_item["deputy_industry"]))
                     for template in res['template_list']}
         else:
-            return {template.template_id: template.content
+            return {template.template_id: Templte(title=template.title,
+                                                  content=template.content,
+                                                  industry=template.industry)
                     for template in Template.query.all()}
 
 
@@ -179,6 +198,9 @@ class WeiXin:
         db.session.commit()
 
 
+    @staticmethod
+    def extract_template_keys(template_content):
+        return re.findall('{{\s*(.+?).DATA\s*}}', template_content)
 
     @staticmethod
     def build_template_data(template_content, **kwargs):
@@ -187,7 +209,7 @@ class WeiXin:
                 "value": kwargs[arg][0],
                 "color": kwargs[arg][1]
             } if arg in kwargs else None
-            for arg in re.findall('{{\s*(.+?).DATA\s*}}', template_content)
+            for arg in WeiXin.extract_template_keys(template_content)
         }
 
     @access_token_required

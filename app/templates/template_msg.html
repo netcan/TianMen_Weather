@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}模板消息管理{% endblock %}
+
+{% block main %}
+<h1 class="h3 pt-4 mb-3 font-weight-normal">模板消息管理</h1>
+<table class="table table-bordered text-center table-striped">
+  <thead>
+    <tr>
+        <th scope="col"># </th>
+        <th scope="col">标题</th>
+        <th scope="col">行业</th>
+        <th scope="col">动作</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for id, template in templates.items() %}
+  <tr>
+      <td>{{ loop.index|e }}</td>
+      <td>{{ template.title|e }}</td>
+      <td>{{ template.industry|e }}</td>
+      <td><a class="btn btn-sm btn-outline-info" href="/admin/template-message/task/{{ id }}" role="button">添加群发</a></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
