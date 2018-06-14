@@ -3,7 +3,7 @@
 
 {% block main %}
 <h1 class="h3 pt-4 mb-3 font-weight-normal">模板群发任务</h1>
-<table class="table table-bordered text-center table-striped">
+<table class="table table-bordered text-center">
     <thead>
     <tr>
         <th scope="col"># </th>
@@ -27,19 +27,31 @@
             <span class="text-primary">总数({{ task.template.users|length }})</span>
             <span class="text-success">成功({{ task.success|e }})</span>
             <span class="text-danger">
-                失败({% if task.status == 2 %} {{ task.template.users|length - task.success }} {% else %}0{% endif %})
+                失败({% if task.status == 2 %}{{ task.template.users|length - task.success }}{% else %}0{% endif %})
             </span>
         </td>
         <td>
-            <a onclick="return confirm('确定开始群发？')" href="/admin/template-message/task/{{ task.id }}/send">
+            <button type="button"
+                    class="btn btn-info btn-sm preview"
+                    title="{{ task.template.title }}"
+                    data-html="true"
+                    data-content="{{ task.data|template_example(task.template.content)|nl2br|safe }}">预览</button>
+
+            {% if task.status == 0 %}
+                <a onclick="return confirm('确定开始群发？')" href="/admin/template-message/task/{{ task.id }}/send">
+            {% endif %}
                 <button type="button"
-                        class="btn btn-primary btn-sm send"
-                        title="{{ task.template.title }}"
-                        data-html="true"
-                        data-content="{{ task.data|template_example(task.template.content)|nl2br|safe }}">群发</button>
+                        class="btn btn-primary btn-sm"
+                        {% if task.status != 0 %}disabled{% endif %}>群发</button>
+            {% if task.status == 0 %} </a> {% endif %}
+
+            <a  href="/admin/template-message/task/{{ task.id }}/edit">
+                <button type="button" class="btn btn-secondary btn-sm">编辑</button>
             </a>
-            <button type="button" class="btn btn-secondary btn-sm">编辑</button>
-            <button type="button" class="btn btn-danger btn-sm">删除</button>
+
+            <a onclick="return confirm('确定删除？')" href="/admin/template-message/task/{{ task.id }}/delete">
+                <button type="button" class="btn btn-danger btn-sm">删除</button>
+            </a>
         </td>
     </tr>
     {% endfor %}
@@ -47,7 +59,7 @@
 </table>
 
 <script>
-    $('.send').popover({
+    $('.preview').popover({
         trigger: 'hover'
     });
 </script>

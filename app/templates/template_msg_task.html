@@ -22,7 +22,10 @@
         {% for key in keys %}
         <label for="{{ key }}" class="col-sm-1 col-form-label mb-1">{{ key }}</label>
         <div class="col-sm-11">
-            <input type="text" name="{{ key }}" class="form-control" id="{{ key }}" placeholder="请输入{{ key }}内容...">
+            <input type="text" name="{{ key }}"
+                   class="form-control" id="{{ key }}"
+                   placeholder="请输入{{ key }}内容..."
+            {% if data %}value="{{ data[key]['value'] }}"{% endif %}>
         </div>
         {% endfor %}
     </div>

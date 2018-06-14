@@ -4,7 +4,7 @@ from app.models import Manager, Template, Template_Task
 from functools import wraps
 from flask import request, session, render_template, redirect, url_for
 from datetime import datetime
-import json
+import time, json, threading
 
 
 @app.route('/wx', methods=["GET", "POST"])
@@ -88,7 +88,83 @@ def template_msg():
 @login_required
 def template_msg_task_list():
     return render_template('template_msg_task_list.html',
-                           tasks=Template_Task.query.order_by(Template_Task.create_at.desc()).all())
+                           tasks=Template_Task.query.order_by(Template_Task.status.asc(), Template_Task.create_at.desc()).all())
+
+
+@app.route('/admin/template-message/task/<int:task_id>/delete',
+           methods=["GET"])
+@login_required
+def template_msg_task_delete(task_id):
+    task = Template_Task.query.get(task_id)
+    if task is None:
+        return redirect(url_for('template_msg_task_list'))
+    db.session.delete(task)
+    db.session.commit()
+    return redirect(url_for('template_msg_task_list'))
+
+
+@app.route('/admin/template-message/task/<int:task_id>/edit',
+           methods=["GET", "POST"])
+def template_msg_task_edit(task_id):
+    task = Template_Task.query.get(task_id)
+    if task is None:
+        return redirect(url_for('template_msg_task_list'))
+
+    if request.method == 'GET':
+        keys = WeiXin.extract_template_keys(task.template.content)
+        data = json.loads(task.data)
+        return render_template('template_msg_task.html', template=task.template, keys=keys, data=data)
+    elif request.method == 'POST':
+        kwargs = get_template_data_from_request(request)
+        if task.status == 0:
+            task.last_updated = int(time.time())
+            task.data = json.dumps(WeiXin.build_template_data(task.template.content, **kwargs))
+        else:
+            new_task = Template_Task(
+                data=json.dumps(WeiXin.build_template_data(task.template.content, **kwargs))
+            )
+            new_task.template = task.template
+            db.session.add(new_task)
+
+        db.session.commit()
+        return redirect(url_for('template_msg_task_list'))
+
+
+@app.route('/admin/template-message/task/<int:task_id>/send',
+           methods=["GET"])
+@login_required
+def template_msg_task_send(task_id):
+    task = Template_Task.query.get(task_id)
+    if task is None or task.status != 0:
+        return redirect(url_for('template_msg_task_list'))
+
+    task.status = 1 # 发送中
+    db.session.commit()
+    db.session.expire(task)
+
+    def sending(task):
+        task = db.session.merge(task)
+        task.success = wx.send_template(task.template.template_id, json.loads(task.data))
+        task.status = 2 # 已发送
+        db.session.commit()
+
+    threading.Thread(target=sending, args=(task, )).start()
+
+    return redirect(url_for('template_msg_task_list'))
+
+
+def get_template_data_from_request(request):
+    kwargs = {}
+    for k, v in request.form.items():
+        if v and v.strip():
+            v = v.strip()
+            for color, cvalue in config.template_colors.items():
+                if color in v:
+                    kwargs[k] = (v, cvalue)
+                    break
+            if k not in kwargs:
+                kwargs[k] = (v, config.template_font_color)
+    return kwargs
 
 
 @app.route('/admin/template-message/task/<template_id>',
@@ -106,20 +182,10 @@ def template_msg_add_task(template_id=None):
     if request.method == "GET":
         return render_template('template_msg_task.html',
                                template=template,
-                               template_id=template_id,
                                keys=keys)
     elif request.method == "POST":
         # print(request.form)
-        kwargs = {}
-        for k, v in request.form.items():
-            if v and v.strip():
-                v = v.strip()
-                for color, cvalue in config.template_colors.items():
-                    if color in v:
-                        kwargs[k] = (v, cvalue)
-                        break
-                if k not in kwargs:
-                    kwargs[k] = (v, config.template_font_color)
+        kwargs = get_template_data_from_request(request)
         task = Template_Task(data=json.dumps(WeiXin.build_template_data(template.content, **kwargs)))
         task.template = template
         db.session.add(task)
@@ -131,6 +197,13 @@ def template_msg_add_task(template_id=None):
 @login_required
 def admin():
     return redirect(url_for('template_msg'))
+
+
+@app.route('/admin/logout', methods=["GET"])
+def logout():
+    if session.get('username'):
+        session.pop('username')
+    return redirect(url_for('admin'))
 
 
 @app.route('/admin/login', methods=["GET", "POST"])
