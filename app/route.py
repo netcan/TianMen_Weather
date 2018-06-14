@@ -49,12 +49,12 @@ def login_required(func):
 
 @app.template_filter('nl2br')
 def nl2br(s):
-    return s.replace("\n", "<br/>")
+    return s.replace("\n", "<br/>") if s else ''
 
 
 @app.template_filter('ts2time')
 def ts2time(s):
-    return datetime.fromtimestamp(s).strftime('%Y-%m-%d %H:%M:%S')
+    return datetime.fromtimestamp(s).strftime('%Y-%m-%d %H:%M:%S') if s else ''
 
 
 @app.template_filter('task_status')
@@ -68,17 +68,17 @@ def ts2time(s):
     return '<span class="text-{}">{}</span>'.format(
         status[int(s)],
         status_content[int(s)]
-    )
+    ) if s else ''
 
 
 @app.template_filter('sex')
 def sex(s):
-    return User.SEX_VALUE[int(s)]
+    return User.SEX_VALUE[int(s)] if s else ''
 
 
 @app.template_filter('subscribe_scene')
 def subscribe_scene(s):
-    return User.SUBSCRIBE_SCENE_VALUE[s]
+    return User.SUBSCRIBE_SCENE_VALUE[s] if s else ''
 
 
 @app.template_filter('template_example')
