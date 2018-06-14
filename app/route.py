@@ -7,6 +7,9 @@ from datetime import datetime
 import time, json, threading
 
 
+TEMPLATE_MSG_PREPARE, TEMPLATE_MSG_SENDING, TEMPLATE_MSG_SENT = range(3)
+
+
 @app.route('/wx', methods=["GET", "POST"])
 def weixin():
     if WeiXin.auth(request):
@@ -18,13 +21,13 @@ def weixin():
 
             m = Message(request.data.decode('utf8'))
             if getattr(m, 'MsgType', None) == 'event' and getattr(m, 'EventKey', None) == 'subscribe':
-                m.Content = '定制灾害预警请输入1\n定制每日天气预报请输入2\n取消定制所有服务请输入9'
+                m.Content = '定制灾害预警请输入1\n定制每日天气预报请输入2\n取消定制所有服务请输入TD'
                 return str(m)
             elif m.Content.strip() == '1':
                 wx.put_openid_to_template(open_id, config.disaster_warning_template_id)
                 m.Content = '已定制灾害预警服务'
                 return str(m)
-            elif m.Content.strip() == '9':
+            elif m.Content.strip().lower() == 'td':
                 wx.delete_openid_from_template(open_id, config.disaster_warning_template_id)
                 m.Content = '已取消订阅所有服务'
                 return str(m)
@@ -80,7 +83,7 @@ def template_example(s, content):
 @app.route('/admin/template-message', methods=["GET", "POST"])
 @login_required
 def template_msg():
-    return render_template('template_msg.html', templates=wx.get_templates())
+    return render_template('template_msg.html', templates=Template.query.all())
 
 
 @app.route('/admin/template-message/task/',
@@ -135,17 +138,17 @@ def template_msg_task_edit(task_id):
 @login_required
 def template_msg_task_send(task_id):
     task = Template_Task.query.get(task_id)
-    if task is None or task.status != 0:
+    if task is None or task.status != TEMPLATE_MSG_PREPARE:
         return redirect(url_for('template_msg_task_list'))
 
-    task.status = 1 # 发送中
+    task.status = TEMPLATE_MSG_SENDING # 发送中
     db.session.commit()
     db.session.expire(task)
 
     def sending(task):
         task = db.session.merge(task)
         task.success = wx.send_template(task.template.template_id, json.loads(task.data))
-        task.status = 2 # 已发送
+        task.status = TEMPLATE_MSG_SENT # 已发送
         db.session.commit()
 
     threading.Thread(target=sending, args=(task, )).start()

@@ -18,7 +18,7 @@
     <tbody>
     {% for task in tasks %}
     <tr>
-        <td>{{ task.id }}</td>
+        <td>{{ loop.index }}</td>
         <td>{{ task.template.title|e }}</td>
         <td>{{ task.create_at|ts2time }}</td>
         <td>{{ task.last_updated|ts2time }}</td>
@@ -27,7 +27,7 @@
             <span class="text-primary">总数({{ task.template.users|length }})</span>
             <span class="text-success">成功({{ task.success|e }})</span>
             <span class="text-danger">
-                失败({% if task.status == 2 %}{{ task.template.users|length - task.success }}{% else %}0{% endif %})
+                失败({% if task.status == 2 %}{{ [task.template.users|length - task.success, 0]|max }}{% else %}0{% endif %})
             </span>
         </td>
         <td>
@@ -37,13 +37,15 @@
                     data-html="true"
                     data-content="{{ task.data|template_example(task.template.content)|nl2br|safe }}">预览</button>
 
-            {% if task.status == 0 %}
+            {% if task.status == TEMPLATE_MSG_PREPARE %}
                 <a onclick="return confirm('确定开始群发？')" href="/admin/template-message/task/{{ task.id }}/send">
             {% endif %}
                 <button type="button"
                         class="btn btn-primary btn-sm"
-                        {% if task.status != 0 %}disabled{% endif %}>群发</button>
-            {% if task.status == 0 %} </a> {% endif %}
+                        {% if task.status != TEMPLATE_MSG_PREPARE %}disabled{% endif %}>群发</button>
+            {% if task.status == TEMPLATE_MSG_PREPARE %}
+                </a>
+            {% endif %}
 
             <a  href="/admin/template-message/task/{{ task.id }}/edit">
                 <button type="button" class="btn btn-secondary btn-sm">编辑</button>

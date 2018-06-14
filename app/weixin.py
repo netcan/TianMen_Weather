@@ -117,29 +117,29 @@ class WeiXin:
                                                   industry=template.industry)
                     for template in Template.query.all()}
 
-
     @access_token_required
-    def get_open_id(self, update=False):
+    def get_users(self, update=False):
         if update or User.query.count() == 0:
             res = requests.post('https://api.weixin.qq.com/cgi-bin/user/get', params=dict(
                 access_token=self.token.access_token
             )).json()
-            openid = res["data"]["openid"]
+            users_openid = res["data"]["openid"]
             while res["count"] < res["total"]:
                 res = requests.get('https://api.weixin.qq.com/cgi-bin/user/get', params=dict(
                     access_token=self.token.access_token,
-                    next_openid=openid[-1]
+                    next_openid=users_openid[-1]
                 )).json()
-                openid.extend(res["data"]["openid"])
+                users_openid.extend(res["data"]["openid"])
 
-            for uid in openid:
+            for uid in users_openid:
                 if User.query.filter_by(open_id=uid).first() is None:
                     user = User(open_id=uid)
                     db.session.add(user)
             db.session.commit()
-            return openid
+            return users_openid
         else:
             return [user.open_id for user in User.query.all()]
+
 
     @access_token_required
     def get_tags(self):
@@ -151,6 +151,44 @@ class WeiXin:
         return {
             tag["name"]: tag["id"] for tag in res["tags"]
         }
+
+    @access_token_required
+    def get_user_info(self, openid):
+        res = requests.get('https://api.weixin.qq.com/cgi-bin/user/info', params=dict(
+            access_token=self.token.access_token,
+            openid=openid
+        )).json()
+        return res if 'errcode' not in res else None
+
+    @access_token_required
+    def batch_get_user_info(self, users_openid, max_cnt=100):
+        user_info_list = []
+        for i in range(0, len(users_openid), max_cnt):
+            users_list = [{"openid": u}
+                          for u in users_openid[i:i+max_cnt]]
+
+            res = requests.post('https://api.weixin.qq.com/cgi-bin/user/info/batchget', params=dict(
+                access_token=self.token.access_token,
+            ), data=json.dumps({
+                "user_list": users_list
+            })).json()
+            user_info_list.extend(res["user_info_list"])
+        return user_info_list
+
+    def update_user_info(self):
+        user_count = User.query.count()
+        for idx, info in enumerate(self.batch_get_user_info(self.get_users(True))):
+            user = User.query.filter_by(open_id=info["openid"]).first()
+            if info is None or info['subscribe'] == 0: # 信息不存在、或者未关注
+                db.session.delete(user)
+                continue
+            column = ['nickname', 'sex', 'city',
+                      'country', 'province', 'headimgurl',
+                      'subscribe_time', 'subscribe_scene']
+            for col in column:
+                setattr(user, col, str(info[col]).strip())
+            print('{}/{}'.format(idx+1, user_count))
+        db.session.commit()
 
     @access_token_required
     def get_openid_by_tag(self, tagid):
@@ -185,7 +223,6 @@ class WeiXin:
             db.session.commit()
         except:
             db.session.rollback()
-
 
     @access_token_required
     def put_tag_openid_to_template(self, tagid, template_id):

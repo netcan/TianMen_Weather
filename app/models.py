@@ -36,13 +36,22 @@ class Manager(db.Model):
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     open_id = db.Column(db.String(120), unique=True, index=True) # openid
+    nickname = db.Column(db.String(64)) # 用户名
+    sex = db.Column(db.Integer) # 性别，值为1时是男性，值为2时是女性，值为0时是未知
+    city = db.Column(db.String(64)) # 城市
+    country = db.Column(db.String(64)) # 国家
+    province = db.Column(db.String(64)) # 省份
+    headimgurl = db.Column(db.String(120)) # 头像
+    subscribe_time = db.Column(db.Integer) # 关注的时间
+    subscribe_scene = db.Column(db.String(64)) # 关注的渠道来源
+
     templates = db.relationship('Template',
                                 secondary=templates,
                                 lazy='subquery',
                                 backref=db.backref('users', lazy=True))
 
     def __repr__(self):
-        return '<User %r>' % self.open_id
+        return '<User %r>' % self.nickname
 
 
 class Template(db.Model):
