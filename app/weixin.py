@@ -187,8 +187,9 @@ class WeiXin:
         update_status.value = "1"
         db.session.commit()
 
-        user_count = User.query.count()
-        for idx, info in enumerate(self.batch_get_user_info(self.get_users(True))):
+        # user_count = User.query.count()
+        self.get_users(True) # fetch from api
+        for idx, info in enumerate(self.batch_get_user_info(self.get_users())): # fetch from database
             user = User.query.filter_by(open_id=info["openid"]).first()
             if info is None or info['subscribe'] == 0: # 信息不存在、或者未关注
                 db.session.delete(user)
