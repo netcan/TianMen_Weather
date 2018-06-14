@@ -11,7 +11,12 @@ def access_token_required(func):
     @wraps(func)
     def wrapper(wx, *args, **kwargs):
         wx.get_token()
-        return func(wx, *args, **kwargs)
+        try:
+            ret = func(wx, *args, **kwargs)
+        except KeyError: # access_token is invalid or not latest, retry
+            wx.get_token(True)
+            ret = func(wx, *args, **kwargs)
+        return ret
     return wrapper
 
 
