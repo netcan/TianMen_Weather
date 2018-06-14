@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}群发任务{% endblock %}
+
+{% block main %}
+<h1 class="h3 pt-4 mb-3 font-weight-normal">模板群发任务</h1>
+<table class="table table-bordered text-center table-striped">
+    <thead>
+    <tr>
+        <th scope="col"># </th>
+        <th scope="col">模板名</th>
+        <th scope="col">创建时间</th>
+        <th scope="col">修改时间</th>
+        <th scope="col">状态</th>
+        <th scope="col">统计</th>
+        <th scope="col">动作</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for task in tasks %}
+    <tr>
+        <td>{{ task.id }}</td>
+        <td>{{ task.template.title|e }}</td>
+        <td>{{ task.create_at|ts2time }}</td>
+        <td>{{ task.last_updated|ts2time }}</td>
+        <td>{{ task.status|task_status|safe }}</td>
+        <td>
+            <span class="text-primary">总数({{ task.template.users|length }})</span>
+            <span class="text-success">成功({{ task.success|e }})</span>
+            <span class="text-danger">
+                失败({% if task.status == 2 %} {{ task.template.users|length - task.success }} {% else %}0{% endif %})
+            </span>
+        </td>
+        <td>
+            <a onclick="return confirm('确定开始群发？')" href="/admin/template-message/task/{{ task.id }}/send">
+                <button type="button"
+                        class="btn btn-primary btn-sm send"
+                        title="{{ task.template.title }}"
+                        data-html="true"
+                        data-content="{{ task.data|template_example(task.template.content)|nl2br|safe }}">群发</button>
+            </a>
+            <button type="button" class="btn btn-secondary btn-sm">编辑</button>
+            <button type="button" class="btn btn-danger btn-sm">删除</button>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<script>
+    $('.send').popover({
+        trigger: 'hover'
+    });
+</script>
+{% endblock %}

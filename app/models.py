@@ -1,4 +1,5 @@
 from app import db
+import time
 from werkzeug.security import generate_password_hash, check_password_hash
 
 templates = db.Table('templates_users',
@@ -53,3 +54,15 @@ class Template(db.Model):
 
     def __repr__(self):
         return '<Template %r>' % self.template_id
+
+
+class Template_Task(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    create_at = db.Column(db.Integer, default=int(time.time()))
+    last_updated = db.Column(db.Integer, default=int(time.time()))
+    success = db.Column(db.Integer, default=0)
+    status = db.Column(db.Integer, default=False) # 0 未发送，1发送中，2已发送
+    data = db.Column(db.Text)
+    template_id = db.Column(db.Integer, db.ForeignKey('template.id'), nullable=False)
+    template = db.relationship('Template', backref=db.backref('tasks', lazy=True))
+

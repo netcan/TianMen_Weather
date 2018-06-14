@@ -1,8 +1,10 @@
-from app import app, config
+from app import app, config, db
 from app.weixin import WeiXin, Message, wx
-from app.models import Manager
+from app.models import Manager, Template, Template_Task
 from functools import wraps
 from flask import request, session, render_template, redirect, url_for
+from datetime import datetime
+import json
 
 
 @app.route('/wx', methods=["GET", "POST"])
@@ -44,7 +46,35 @@ def login_required(func):
 
 @app.template_filter('nl2br')
 def nl2br(s):
-    return s.replace("\n", "<br />")
+    return s.replace("\n", "<br/>")
+
+
+@app.template_filter('ts2time')
+def ts2time(s):
+    return datetime.fromtimestamp(s).strftime('%Y-%m-%d %H:%M:%S')
+
+
+@app.template_filter('task_status')
+def ts2time(s):
+    status = [
+        'danger', 'info', 'success'
+    ]
+    status_content = [
+        '未发送', '发送中', '已发送'
+    ]
+    return '<span class="text-{}">{}</span>'.format(
+        status[int(s)],
+        status_content[int(s)]
+    )
+
+
+@app.template_filter('template_example')
+def template_example(s, content):
+    data = json.loads(s)
+    for k, v in data.items():
+        content = content.replace('{{{{{}.DATA}}}}'.format(k),
+                                  '<font color={}>{}</font>'.format(v['color'], v['value']) if v else '')
+    return content
 
 
 @app.route('/admin/template-message', methods=["GET", "POST"])
@@ -53,24 +83,48 @@ def template_msg():
     return render_template('template_msg.html', templates=wx.get_templates())
 
 
-@app.route('/admin/template-message/task/')
+@app.route('/admin/template-message/task/',
+           methods=["GET"])
+@login_required
+def template_msg_task_list():
+    return render_template('template_msg_task_list.html',
+                           tasks=Template_Task.query.order_by(Template_Task.create_at.desc()).all())
+
+
 @app.route('/admin/template-message/task/<template_id>',
            methods=["GET", "POST"])
 @login_required
-def template_msg_task(template_id=None):
-    templates = wx.get_templates()
-    if not template_id or template_id not in templates:
+def template_msg_add_task(template_id=None):
+    if not template_id:
         return redirect(url_for('template_msg'))
 
-    keys = WeiXin.extract_template_keys(templates[template_id].content)
+    template = Template.query.filter_by(template_id=template_id).first()
+    if template is None:
+        return redirect(url_for('template_msg'))
+
+    keys = WeiXin.extract_template_keys(template.content)
     if request.method == "GET":
         return render_template('template_msg_task.html',
-                               template=templates[template_id],
+                               template=template,
                                template_id=template_id,
                                keys=keys)
     elif request.method == "POST":
-        print(request.form)
-        return 'success'
+        # print(request.form)
+        kwargs = {}
+        for k, v in request.form.items():
+            if v and v.strip():
+                v = v.strip()
+                for color, cvalue in config.template_colors.items():
+                    if color in v:
+                        kwargs[k] = (v, cvalue)
+                        break
+                if k not in kwargs:
+                    kwargs[k] = (v, config.template_font_color)
+        task = Template_Task(data=json.dumps(WeiXin.build_template_data(template.content, **kwargs)))
+        task.template = template
+        db.session.add(task)
+        db.session.commit()
+        return redirect(url_for('template_msg_task_list'))
 
 
 @app.route('/admin', methods=["GET"])
@@ -79,7 +133,7 @@ def admin():
     return redirect(url_for('template_msg'))
 
 
-@app.route('/login', methods=["GET", "POST"])
+@app.route('/admin/login', methods=["GET", "POST"])
 def login():
     if request.method == "GET":
         return render_template('login.html')
