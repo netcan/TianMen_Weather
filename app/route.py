@@ -1,6 +1,6 @@
 from app import app, config, db
 from app.weixin import WeiXin, Message, wx
-from app.models import Manager, Template, Template_Task
+from app.models import Manager, Template, Template_Task, User, Status
 from functools import wraps
 from flask import request, session, render_template, redirect, url_for
 from datetime import datetime
@@ -71,6 +71,16 @@ def ts2time(s):
     )
 
 
+@app.template_filter('sex')
+def sex(s):
+    return User.SEX_VALUE[int(s)]
+
+
+@app.template_filter('subscribe_scene')
+def subscribe_scene(s):
+    return User.SUBSCRIBE_SCENE_VALUE[s]
+
+
 @app.template_filter('template_example')
 def template_example(s, content):
     data = json.loads(s)
@@ -108,6 +118,7 @@ def template_msg_task_delete(task_id):
 
 @app.route('/admin/template-message/task/<int:task_id>/edit',
            methods=["GET", "POST"])
+@login_required
 def template_msg_task_edit(task_id):
     task = Template_Task.query.get(task_id)
     if task is None:
@@ -170,6 +181,23 @@ def get_template_data_from_request(request):
     return kwargs
 
 
+@app.route('/admin/template-message/users/<template_id>/')
+@login_required
+def template_msg_users(template_id=None):
+    if not template_id:
+        return redirect(url_for('template_msg'))
+    template = Template.query.filter_by(template_id=template_id).first()
+    if template is None:
+        return redirect(url_for('template_msg'))
+    users_update_status = Status.query.get('users_update_status')
+    users_update_status = False if users_update_status is None \
+        else int(users_update_status.value)
+
+    return render_template("users_list.html", users=template.users,
+                           users_update_status=users_update_status,
+                           title=template.title)
+
+
 @app.route('/admin/template-message/task/<template_id>',
            methods=["GET", "POST"])
 @login_required
@@ -194,6 +222,23 @@ def template_msg_add_task(template_id=None):
         db.session.add(task)
         db.session.commit()
         return redirect(url_for('template_msg_task_list'))
+
+
+@app.route('/admin/users')
+@login_required
+def users():
+    users_update_status = Status.query.get('users_update_status')
+    users_update_status = False if users_update_status is None \
+        else int(users_update_status.value)
+    return render_template("users_list.html", users=User.query.all(),
+                           users_update_status=users_update_status)
+
+
+@app.route('/admin/users/refresh')
+@login_required
+def users_refresh():
+    threading.Thread(target=wx.update_user_info).start()
+    return redirect(request.referrer or url_for('users'))
 
 
 @app.route('/admin', methods=["GET"])

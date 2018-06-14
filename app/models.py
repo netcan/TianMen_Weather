@@ -8,6 +8,11 @@ templates = db.Table('templates_users',
                      )
 
 
+class Status(db.Model): # 存放内部状态，kv数据库
+    key = db.Column(db.String(32), primary_key=True, nullable=False)
+    value = db.Column(db.Text, nullable=False)
+
+
 class Token(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     access_token = db.Column(db.String(512))
@@ -34,10 +39,22 @@ class Manager(db.Model):
 
 
 class User(db.Model):
+    SEX_VALUE = ['未知', '男', '女']
+    SUBSCRIBE_SCENE_VALUE = {
+        'ADD_SCENE_SEARCH': '公众号搜索',
+        'ADD_SCENE_ACCOUNT_MIGRATION': '公众号迁移',
+        'ADD_SCENE_PROFILE_CARD': '名片分享',
+        'ADD_SCENE_QR_CODE': '扫描二维码',
+        'ADD_SCENE_PROFILE_LINK': '图文页内名称点击',
+        'ADD_SCENE_PROFILE_ITEM': '图文页右上角菜单',
+        'ADD_SCENE_PAID': '支付后关注',
+        'ADD_SCENE_OTHERS': '其他'
+    }
+
     id = db.Column(db.Integer, primary_key=True)
     open_id = db.Column(db.String(120), unique=True, index=True) # openid
     nickname = db.Column(db.String(64)) # 用户名
-    sex = db.Column(db.Integer) # 性别，值为1时是男性，值为2时是女性，值为0时是未知
+    sex = db.Column(db.String(10)) # 性别，值为1时是男性，值为2时是女性，值为0时是未知
     city = db.Column(db.String(64)) # 城市
     country = db.Column(db.String(64)) # 国家
     province = db.Column(db.String(64)) # 省份

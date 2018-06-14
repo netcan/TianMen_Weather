@@ -19,8 +19,14 @@
       <td>{{ loop.index|e }}</td>
       <td>{{ template.title|e }}</td>
       <td>{{ template.industry|e }}</td>
-      <td>{{ template.users|length }}</td>
-      <td><a class="btn btn-sm btn-outline-info" href="/admin/template-message/task/{{ id }}" role="button">添加群发</a></td>
+      <td>
+          {% if template.users|length > 0 %}
+          <a href="/admin/template-message/users/{{ template.template_id }}">{{ template.users|length }}</a>
+          {% else %}
+              0
+          {% endif %}
+      </td>
+      <td><a class="btn btn-sm btn-outline-info" href="/admin/template-message/task/{{ template.template_id }}" role="button">添加群发</a></td>
   </tr>
   {% endfor %}
   </tbody>

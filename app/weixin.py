@@ -1,5 +1,5 @@
 from functools import wraps
-from app.models import Token, Template, User
+from app.models import Token, Template, User, Status
 from app import db, config
 from collections import namedtuple
 import requests, json, hashlib, re
@@ -176,6 +176,17 @@ class WeiXin:
         return user_info_list
 
     def update_user_info(self):
+        update_status = Status.query.get('users_update_status')
+        if update_status is None:
+            update_status = Status(key='users_update_status', value="0")
+            db.session.add(update_status)
+            db.session.commit()
+        if int(update_status.value):  # 更新中
+            return
+
+        update_status.value = "1"
+        db.session.commit()
+
         user_count = User.query.count()
         for idx, info in enumerate(self.batch_get_user_info(self.get_users(True))):
             user = User.query.filter_by(open_id=info["openid"]).first()
@@ -187,7 +198,9 @@ class WeiXin:
                       'subscribe_time', 'subscribe_scene']
             for col in column:
                 setattr(user, col, str(info[col]).strip())
-            print('{}/{}'.format(idx+1, user_count))
+            # print('{}/{}'.format(idx+1, user_count))
+
+        update_status.value = "0"
         db.session.commit()
 
     @access_token_required

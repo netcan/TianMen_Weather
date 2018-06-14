@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}粉丝列表{% endblock %}
+
+{% block main %}
+<h1 class="h3 pt-4 mb-3 font-weight-normal">{% if title %}{{ title }}的{% endif %}粉丝列表({{ users|length }})
+    {% if users_update_status == 1 %}
+    <button class="btn btn-info" disabled>
+        粉丝列表获取中...
+    </button>
+    {% else %}
+    <a href="/admin/users/refresh">
+        <button class="btn btn-success">
+            刷新粉丝列表
+        </button>
+    </a>
+    {% endif %}
+    </button>
+</h1>
+
+<table class="table table-bordered text-center" id="users_list">
+    <thead>
+    <tr>
+        <th scope="col"># </th>
+        <th scope="col">头像</th>
+        <th scope="col">用户名</th>
+        <th scope="col">性别</th>
+        <th scope="col">国家</th>
+        <th scope="col">省份</th>
+        <th scope="col">城市</th>
+        <th scope="col">关注时间</th>
+        <th scope="col">关注方式</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for user in users %}
+    <tr>
+        <td>{{ user.id }}</td>
+        <td><img class="avatar" src="{{ user.headimgurl }}"></td>
+        <td>{{ user.nickname }}</td>
+        <td>{{ user.sex|sex|e }}</td>
+        <td>{{ user.country|e }}</td>
+        <td>{{ user.province|e }}</td>
+        <td>{{ user.city|e }}</td>
+        <td>{{ user.subscribe_time|ts2time }}</td>
+        <td>{{ user.subscribe_scene|subscribe_scene|e }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<script>
+    $(document).ready(function() {
+        $('#users_list').DataTable({
+            stateSave: true,
+        });
+    } );
+</script>
+
+{% endblock %}
