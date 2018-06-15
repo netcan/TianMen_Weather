@@ -3,7 +3,7 @@
 
 {% block main %}
 <h1 class="h3 pt-4 mb-3 font-weight-normal">模板群发任务</h1>
-<table class="table table-bordered text-center">
+<table class="table table-bordered text-center" id="task-list">
     <thead>
     <tr>
         <th scope="col"># </th>
@@ -64,6 +64,9 @@
     $(document).ready(function() {
         $('.preview').popover({
             trigger: 'hover'
+        });
+        $('#task-list').DataTable({
+            stateSave: true,
         });
     });
 </script>

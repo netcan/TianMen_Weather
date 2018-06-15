@@ -77,6 +77,7 @@ class Template(db.Model):
     content = db.Column(db.String(256))
     title = db.Column(db.String(120)) # 模板标题
     industry = db.Column(db.String(120)) # 行业
+    config = db.Column(db.Text) # 参数别名、类型、默认值
 
     def __repr__(self):
         return '<Template %r>' % self.template_id

@@ -122,6 +122,9 @@ class WeiXin:
         )).json()
         templates_id = []
         for template_item in res["template_list"]:
+            if '订阅模板消息' in template_item['title']: # 订阅模板消息，默认的去掉
+                continue
+
             templates_id.append(template_item["template_id"])
 
             template = Template.query.filter_by(template_id=template_item["template_id"]).first()

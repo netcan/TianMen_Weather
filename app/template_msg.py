@@ -1,11 +1,10 @@
-from app.weixin import wx
-from app import config
-import re
+from app.weixin import wx, WeiXin
+from app.models import Template, Template_Task
+from app import config, db
+import re, json
 
 
 def disaster_warning_msg(msg_file):
-    # templates = wx.get_templates()
-    templates = {}
     with open(msg_file) as f:
         msg = ''.join(f.readlines()).strip()
 
@@ -17,14 +16,24 @@ def disaster_warning_msg(msg_file):
             signal_color = c
             break
 
-    template_arg = wx.build_template_data(templates[config.disaster_warning_template_id],
-                                          first=(signal + '\n', signal_color),
-                                          keyword1=(unit, config.template_font_color),
-                                          keyword2=(time, config.template_font_color),
-                                          keyword3=(msg, config.template_font_color)
-                                          )
+    template = Template.query.filter_by(template_id=config.disaster_warning_template_id).first()
+    if template:
+        kwargs = dict(
+            first=(signal + '\n', signal_color),
+            keyword1=(unit, config.template_font_color),
+            keyword2=(time, config.template_font_color),
+            keyword3=(msg, config.template_font_color)
+        )
+
+        template_arg = wx.build_template_data(template.content, **kwargs)
+        task = Template_Task(data=json.dumps(WeiXin.build_template_data(template.content, **kwargs)))
+        task.status = '2'
+        task.template = template
+        db.session.add(task)
+        db.session.commit()
+
     # print(template_arg)
-    return wx.send_template(config.disaster_warning_template_id, template_arg)
+        return wx.send_template(config.disaster_warning_template_id, template_arg)
 
 
 def disaster_warning_txt(txt_file):

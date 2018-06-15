@@ -38,7 +38,10 @@
               0
           {% endif %}
       </td>
-      <td><a class="btn btn-sm btn-outline-info" href="/admin/template-message/task/{{ template.template_id }}" role="button">添加群发</a></td>
+      <td>
+          <a class="btn btn-sm btn-outline-info" href="/admin/template-message/task/{{ template.template_id }}" role="button">添加群发</a>
+          <a class="btn btn-sm btn-outline-info" href="/admin/template-message/config/{{ template.template_id }}/" role="button">配置</a>
+      </td>
   </tr>
   {% endfor %}
   </tbody>

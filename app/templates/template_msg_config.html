@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}配置模板消息{% endblock %}
+
+{% block main %}
+<h1 class="h3 pt-4 mb-3 font-weight-normal">配置模板消息</h1>
+<table class="table">
+    <tbody>
+    <tr>
+        <td>标题</td><td>{{ template.title|e }}</td>
+    </tr><tr>
+        <td>详细内容</td><td>{{ template.content|nl2br|safe }}</td>
+    </tr>
+    </tbody>
+</table>
+
+<form method="post" acthon="#">
+        {% for key in keys %}
+        <div class="form-group row">
+            <div class="form-group col-sm-4">
+                <label for="{{ key }}-name" class="col-form-label mb-1">{{ key }}的别名</label>
+                <input type="text" name="{{ key }}-name"
+                       class="form-control" id="{{ key }}-name"
+                       placeholder="请输入{{ key }}的别名..."
+                       value="{% if config and key in config and 'name' in config[key] and config[key]['name'] %}{{ config[key]['name'] }}{% else %}{{ key }}{% endif %}"
+                >
+
+            </div>
+            <div class="form-group col-sm-4">
+                <label for="{{ key }}-type" class="col-form-label mb-1">{{ key }}的类型</label>
+                <select id="{{ key }}-type" class="form-control" name="{{ key }}-type">
+                    <option value="{{ TEMPLATE_ARG_TEXT }}">文本</option>
+                    <option value="{{ TEMPLATE_ARG_DATETIME }}">时间</option>
+                    <option value="{{ TEMPLATE_ARG_SELECT }}">选项</option>
+                </select>
+                <script>
+                    $('#{{ key }}-type').val(
+                        {% if config and key in config and 'type' in config[key] and config[key]['type'] %}
+                        {{ config[key]['type'] }}
+                        {% else %}
+                        0
+                        {% endif %}
+                    );
+                </script>
+            </div>
+
+            <div class="form-group col-sm-4">
+                <label for="{{ key }}-value" class="col-form-label mb-1">{{ key }}的默认值</label>
+                <input type="text" name="{{ key }}-value"
+                       class="form-control" id="{{ key }}-value"
+                       placeholder="请输入{{ key }}的默认值..."
+                       value="{% if config and key in config and 'value' in config[key] and config[key]['value'] %}{{ config[key]['value'] }}{% endif %}">
+            </div>
+        </div>
+        {% endfor %}
+    <button class="btn btn-primary btn-lg" type="submit">保存配置</button>
+</form>
+{% endblock %}

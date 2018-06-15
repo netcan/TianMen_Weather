@@ -8,6 +8,7 @@ import time, json, threading
 
 
 TEMPLATE_MSG_PREPARE, TEMPLATE_MSG_SENDING, TEMPLATE_MSG_SENT = range(3)
+TEMPLATE_ARG_TEXT, TEMPLATE_ARG_DATETIME, TEMPLATE_ARG_SELECT = range(3)
 
 
 @app.route('/wx', methods=["GET", "POST"])
@@ -90,6 +91,15 @@ def template_example(s, content):
     return content
 
 
+@app.template_filter('template_arg_select')
+def template_arg_select(s):
+    if not s: return ''
+    ret = ''
+    for o in s.split(' '):
+        ret += '<option value="{}">{}</option>'.format(o, o)
+    return ret
+
+
 @app.route('/admin/template-message', methods=["GET", "POST"])
 @login_required
 def template_msg():
@@ -116,6 +126,8 @@ def template_msg_task_list():
                            tasks=Template_Task.query.order_by(Template_Task.status.asc(), Template_Task.create_at.desc()).all())
 
 
+
+
 @app.route('/admin/template-message/task/<int:task_id>/delete',
            methods=["GET"])
 @login_required
@@ -139,7 +151,12 @@ def template_msg_task_edit(task_id):
     if request.method == 'GET':
         keys = WeiXin.extract_template_keys(task.template.content)
         data = json.loads(task.data)
-        return render_template('template_msg_task.html', template=task.template, keys=keys, data=data)
+        return render_template('template_msg_task.html',
+                               template=task.template,
+                               config=json.loads(task.template.config) if task.template.config else None,
+                               keys=keys,
+                               data=data,
+                               )
     elif request.method == 'POST':
         kwargs = get_template_data_from_request(request)
         if task.status == 0:
@@ -193,6 +210,22 @@ def get_template_data_from_request(request):
     return kwargs
 
 
+def get_template_config_from_request(request):
+    config = {}
+    for k, v in request.form.items():
+        if len(k.split('-')) != 2:
+            continue
+        key, typ = k.split('-')
+        if key not in config:
+            config[key] = {'name': key, 'type': TEMPLATE_ARG_TEXT, 'value': ''}
+
+        if v and v.strip():
+            config[key][typ] = v.strip()
+    return config
+
+
+
+
 @app.route('/admin/template-message/users/<template_id>/')
 @login_required
 def template_msg_users(template_id=None):
@@ -210,6 +243,29 @@ def template_msg_users(template_id=None):
                            title=template.title)
 
 
+@app.route('/admin/template-message/config/<template_id>/',
+           methods=["GET", "POST"])
+@login_required
+def template_msg_config(template_id=None):
+    if not template_id:
+        return redirect(url_for('template_msg'))
+    template = Template.query.filter_by(template_id=template_id).first()
+    if template is None:
+        return redirect(url_for('template_msg'))
+    keys = WeiXin.extract_template_keys(template.content)
+
+    if request.method == "GET":
+        return render_template('template_msg_config.html',
+                               template=template,
+                               config=json.loads(template.config) if template.config else None,
+                               keys=keys)
+    elif request.method == "POST":
+        config = get_template_config_from_request(request)
+        template.config = json.dumps(config)
+        db.session.commit()
+        return redirect(url_for('template_msg'))
+
+
 @app.route('/admin/template-message/task/<template_id>',
            methods=["GET", "POST"])
 @login_required
@@ -225,6 +281,7 @@ def template_msg_add_task(template_id=None):
     if request.method == "GET":
         return render_template('template_msg_task.html',
                                template=template,
+                               config=json.loads(template.config) if template.config else None,
                                keys=keys)
     elif request.method == "POST":
         # print(request.form)
