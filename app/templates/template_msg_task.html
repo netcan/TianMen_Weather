@@ -1,18 +1,16 @@
 {% extends "base.html" %}
-{% block title %}添加群发任务{% endblock %}
+{% block title %}群发任务{% endblock %}
 
 {% block main %}
-<h1 class="h3 pt-4 mb-3 font-weight-normal">添加群发任务</h1>
+<h1 class="h3 pt-4 mb-3 font-weight-normal">
+    {% if data %}编辑{% else %}添加{% endif %}群发任务
+</h1>
 <table class="table">
   <tbody>
-    <tr>
-        <td>标题</td><td>{{ template.title|e }}</td>
-    </tr><tr>
-        <td>行业</td><td>{{ template.industry|e }}</td>
-    </tr><tr>
-        <td>详细内容</td><td>{{ template.content|nl2br|safe }}</td>
-    </tr><tr>
-        <td>内容示例</td><td id="example" data-content="{{template.content|nl2br|safe}}"></td>
+    <tr> <td style="width: 16.66%">标题</td><td>{{ template.title|e }}</td> </tr>
+    {# <tr> <td>行业</td><td>{{ template.industry|e }}</td> </tr> #}
+    {# <tr> <td>详细内容</td><td>{{ template.content|nl2br|safe }}</td> </tr> #}
+    <tr> <td style="width: 16.66%">信息预览</td><td id="example" data-content="{{template.content|nl2br|safe}}"></td>
     </tr>
   </tbody>
 </table>
@@ -52,7 +50,8 @@
                                     {% if not data %}
                                     value: new Date(),
                                     {% endif %}
-                                    step: 1
+                                    step: 1,
+                                    validateOnBlur:false
                                 });
                             });
                         </script>
@@ -87,7 +86,8 @@
             );
         }
         example();
-        $('input').keyup(example);
+        $(document).on('change', 'input', example);
+        $(document).on('change', 'select', example);
         $.datetimepicker.setLocale('zh');
     });
 </script>

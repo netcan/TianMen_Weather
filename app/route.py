@@ -123,7 +123,7 @@ def template_msg_refresh():
 @login_required
 def template_msg_task_list():
     return render_template('template_msg_task_list.html',
-                           tasks=Template_Task.query.order_by(Template_Task.status.asc(), Template_Task.create_at.desc()).all())
+                           tasks=Template_Task.query.order_by(Template_Task.create_at.desc()).all())
 
 
 
