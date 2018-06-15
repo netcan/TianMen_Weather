@@ -2,7 +2,19 @@
 {% block title %}模板消息管理{% endblock %}
 
 {% block main %}
-<h1 class="h3 pt-4 mb-3 font-weight-normal">模板消息管理</h1>
+<h1 class="h3 pt-4 mb-3 font-weight-normal">模板消息管理
+    {% if update_status == 1 %}
+    <button class="btn btn-info" disabled>
+        模板列表获取中...
+    </button>
+    {% else %}
+    <a href="/admin/template-message/refresh">
+        <button class="btn btn-success">
+            刷新模板列表
+        </button>
+    </a>
+    {% endif %}
+</h1>
 <table class="table table-bordered text-center table-striped">
   <thead>
     <tr>

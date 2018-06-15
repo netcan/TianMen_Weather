@@ -1,6 +1,7 @@
 from functools import wraps
 from app.models import Token, Template, User, Status
 from app import db, config
+from bisect import bisect_left
 from collections import namedtuple
 import requests, json, hashlib, re
 import time
@@ -18,6 +19,34 @@ def access_token_required(func):
             ret = func(wx, *args, **kwargs)
         return ret
     return wrapper
+
+
+def updating(update_status_key):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            update_status = Status.query.get(update_status_key)
+            if update_status is None:
+                update_status = Status(key=update_status_key, value="0")
+                db.session.add(update_status)
+                db.session.commit()
+            if int(update_status.value):  # 更新中
+                return
+
+            update_status.value = "1"
+            db.session.commit()
+
+            try:
+                ret = func(*args, **kwargs)
+            except KeyError:
+                ret = None
+
+            update_status.value = "0"
+            db.session.commit()
+
+            return ret
+        return wrapper
+    return decorator
 
 
 class Message:
@@ -86,41 +115,38 @@ class WeiXin:
                 print(res)
 
     @access_token_required
-    def get_templates(self, update=False):
-        Templte = namedtuple('Template', ['title', 'content', 'industry'])
-        if update or Template.query.count() == 0:
-            res = requests.get('https://api.weixin.qq.com/cgi-bin/template/get_all_private_template', dict(
-                access_token=self.token.access_token
-            )).json()
-            for template_item in res["template_list"]:
-                template = Template.query.filter_by(template_id=template_item["template_id"]).first()
-                if template is None:
-                    template = Template(template_id=template_item['template_id'],
-                                        content=template_item['content'],
-                                        title=template_item['title'],
-                                        industry='{} - {}'.format(template_item["primary_industry"],
-                                                                  template_item["deputy_industry"]))
-                    db.session.add(template)
-                else:
-                    template.template_id = template_item["template_id"]
-                    template.content = template_item["content"]
-                    template.title = template_item["title"]
-                    template.industry = '{} - {}'.format(template_item["primary_industry"],
-                                                         template_item["deputy_industry"])
+    @updating('templates_update_status')
+    def update_templates(self):
+        res = requests.get('https://api.weixin.qq.com/cgi-bin/template/get_all_private_template', dict(
+            access_token=self.token.access_token
+        )).json()
+        templates_id = []
+        for template_item in res["template_list"]:
+            templates_id.append(template_item["template_id"])
 
-            db.session.commit()
+            template = Template.query.filter_by(template_id=template_item["template_id"]).first()
+            if template is None: # 添加
+                template = Template(template_id=template_item['template_id'],
+                                    content=template_item['content'],
+                                    title=template_item['title'],
+                                    industry='{} - {}'.format(template_item["primary_industry"],
+                                                              template_item["deputy_industry"]))
+                db.session.add(template)
+            else: # 更新
+                template.template_id = template_item["template_id"]
+                template.content = template_item["content"]
+                template.title = template_item["title"]
+                template.industry = '{} - {}'.format(template_item["primary_industry"],
+                                                     template_item["deputy_industry"])
 
-            return {template['template_id']: Templte(title=template['title'],
-                                                     content=template['content'],
-                                                     industry='{} - {}'.format(
-                                                         template_item["primary_industry"],
-                                                         template_item["deputy_industry"]))
-                    for template in res['template_list']}
-        else:
-            return {template.template_id: Templte(title=template.title,
-                                                  content=template.content,
-                                                  industry=template.industry)
-                    for template in Template.query.all()}
+        templates_id.sort()
+        for template in Template.query.all():
+            idx = bisect_left(templates_id, template.template_id)
+            if idx >= len(templates_id) or templates_id[idx] != template.template_id:
+                db.session.delete(template)
+
+        db.session.commit()
+
 
     @access_token_required
     def get_users(self, update=False):
@@ -180,18 +206,8 @@ class WeiXin:
             user_info_list.extend(res["user_info_list"])
         return user_info_list
 
+    @updating('users_update_status')
     def update_user_info(self):
-        update_status = Status.query.get('users_update_status')
-        if update_status is None:
-            update_status = Status(key='users_update_status', value="0")
-            db.session.add(update_status)
-            db.session.commit()
-        if int(update_status.value):  # 更新中
-            return
-
-        update_status.value = "1"
-        db.session.commit()
-
         # user_count = User.query.count()
         self.get_users(True) # fetch from api
         for idx, info in enumerate(self.batch_get_user_info(self.get_users())): # fetch from database
@@ -206,7 +222,6 @@ class WeiXin:
                 setattr(user, col, str(info[col]).strip())
             # print('{}/{}'.format(idx+1, user_count))
 
-        update_status.value = "0"
         db.session.commit()
 
     @access_token_required

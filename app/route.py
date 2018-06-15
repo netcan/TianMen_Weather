@@ -93,7 +93,19 @@ def template_example(s, content):
 @app.route('/admin/template-message', methods=["GET", "POST"])
 @login_required
 def template_msg():
-    return render_template('template_msg.html', templates=Template.query.all())
+    update_status = Status.query.get('templates_update_status')
+    update_status = False if update_status is None \
+        else int(update_status.value)
+
+    return render_template('template_msg.html', templates=Template.query.all(), update_status=update_status)
+
+
+@app.route('/admin/template-message/refresh/',
+           methods=["GET"])
+@login_required
+def template_msg_refresh():
+    threading.Thread(target=wx.update_templates).start()
+    return redirect(request.referrer or url_for('template_msg'))
 
 
 @app.route('/admin/template-message/task/',

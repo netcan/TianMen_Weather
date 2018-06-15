@@ -4,7 +4,8 @@ import re
 
 
 def disaster_warning_msg(msg_file):
-    templates = wx.get_templates()
+    # templates = wx.get_templates()
+    templates = {}
     with open(msg_file) as f:
         msg = ''.join(f.readlines()).strip()
 
@@ -27,7 +28,6 @@ def disaster_warning_msg(msg_file):
 
 
 def disaster_warning_txt(txt_file):
-    templates = wx.get_templates()
     with open(txt_file) as f:
         txt_content = f.readlines()
 
