@@ -30,8 +30,8 @@
                 {% else %}
                 总数(0)
                 {% endif %}
-            </span>
-            <span class="text-success">成功({{ task.success|e }})</span>
+            </span><br>
+            <span class="text-success">成功({{ task.success|e }})</span><br>
             <span class="text-danger">
                 失败({% if task.status == 2 %}{{ [task.template.users|length - task.success, 0]|max }}{% else %}0{% endif %})
             </span>
@@ -52,7 +52,7 @@
             {% if task.status == TEMPLATE_MSG_PREPARE %}
                 </a>
             {% endif %}
-
+            <br>
             <a  href="/admin/template-message/task/{{ task.id }}/edit">
                 <button type="button" class="btn btn-secondary btn-sm">编辑</button>
             </a>
