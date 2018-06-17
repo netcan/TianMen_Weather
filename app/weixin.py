@@ -261,8 +261,6 @@ class WeiXin:
             user.templates.append(template)
             db.session.commit()
 
-
-
     def put_openid_to_all_template(self, openid):
         # 将用户放到所有的模板消息发送列表中
         user = User.query.filter_by(open_id=openid).first()
@@ -273,6 +271,11 @@ class WeiXin:
             user.templates.append(template)
         db.session.commit()
 
+    def put_all_openid_to_all_template(self):
+        users = User.query.all()
+        for template in Template.query.all():
+            template.users.extend(users)
+        db.session.commit()
 
     def delete_openid_from_template(self, open_id, template_id):
         user = User.query.filter_by(open_id=open_id).first()
@@ -291,6 +294,7 @@ class WeiXin:
             return
         user.templates.clear()
         db.session.commit()
+
 
     @access_token_required
     def put_tag_openid_to_template(self, tagid, template_id):

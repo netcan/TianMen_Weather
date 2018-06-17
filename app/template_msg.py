@@ -29,11 +29,13 @@ def disaster_warning_msg(msg_file):
         task = Template_Task(data=json.dumps(WeiXin.build_template_data(template.content, **kwargs)))
         task.status = '2'
         task.template = template
+        task.success = wx.send_template(config.disaster_warning_template_id, template_arg)
         db.session.add(task)
         db.session.commit()
 
+        return task.success
+
     # print(template_arg)
-        return wx.send_template(config.disaster_warning_template_id, template_arg)
 
 
 def disaster_warning_txt(txt_file):

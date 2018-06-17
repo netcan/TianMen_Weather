@@ -24,7 +24,13 @@
         <td>{{ task.last_updated|ts2time }}</td>
         <td>{{ task.status|task_status|safe }}</td>
         <td>
-            <span class="text-primary">总数({{ task.template.users|length }})</span>
+            <span class="text-primary">
+                {% if task.template.users|length > 0 %}
+                <a href="/admin/template-message/users/{{ task.template.template_id }}">总数({{ task.template.users|length }})</a>
+                {% else %}
+                总数(0)
+                {% endif %}
+            </span>
             <span class="text-success">成功({{ task.success|e }})</span>
             <span class="text-danger">
                 失败({% if task.status == 2 %}{{ [task.template.users|length - task.success, 0]|max }}{% else %}0{% endif %})
