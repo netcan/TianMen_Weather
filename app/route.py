@@ -21,15 +21,35 @@ def weixin():
             # print(request.data)
 
             m = Message(request.data.decode('utf8'))
-            if getattr(m, 'MsgType', None) == 'event' and getattr(m, 'EventKey', None) == 'subscribe':
-                m.Content = '定制灾害预警请输入1\n定制每日天气预报请输入2\n取消定制所有服务请输入TD'
-                return str(m)
+            if getattr(m, 'MsgType', None) == 'event':
+                if getattr(m, 'EventKey', None) == 'subscribe': # 定制服务
+                    m.Content = '定制灾害预警请输入1\n定制每日天气预报请输入2\n定制农事天气请输入3\n取消定制所有服务请输入TD'
+                    return str(m)
+                elif getattr(m, 'Event', None) == 'subscribe': # 关注该公众号
+                    m.Content = '欢迎关注天门气象公众号，已为您定制推送服务。您可以在气象信息->定制服务中设置。'
+                    wx.put_openid_to_all_template(open_id)
+                    return str(m)
+                elif getattr(m, 'Event', None) == 'unsubscribe': # 取消关注该公众号
+                    user = User.query.filter_by(open_id=open_id).first()
+                    if user is None: pass
+                    else:
+                        db.session.delete(user)
+                        db.session.commit()
+                    
             elif m.Content.strip() == '1':
-                wx.put_openid_to_template(open_id, config.disaster_warning_template_id)
+                wx.put_openid_to_template_by_title(open_id, '气象预警提醒')
                 m.Content = '已定制灾害预警服务'
                 return str(m)
+            elif m.Content.strip() == '2':
+                wx.put_openid_to_template_by_title(open_id, '出行服务提醒')
+                m.Content = '已定制每日天气预报服务'
+                return str(m)
+            elif m.Content.strip() == '3':
+                wx.put_openid_to_template_by_title(open_id, '农事服务通知')
+                m.Content = '已定制农事天气服务'
+                return str(m)
             elif m.Content.strip().lower() == 'td':
-                wx.delete_openid_from_template(open_id, config.disaster_warning_template_id)
+                wx.delete_openid_from_all_template(open_id)
                 m.Content = '已取消订阅所有服务'
                 return str(m)
 

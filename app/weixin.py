@@ -238,18 +238,42 @@ class WeiXin:
         })).json()
         return res["data"]["openid"]
 
-    @access_token_required
     def put_openid_to_template(self, open_id, template_id):
         # 将用户放到模板消息发送列表中
         user = User.query.filter_by(open_id=open_id).first()
         if user is None:
             user = User(open_id=open_id)
             db.session.add(user)
+
         template = Template.query.filter_by(template_id=template_id).first()
-        user.templates.append(template)
+        if template: 
+            user.templates.append(template)
+            db.session.commit()
+
+    def put_openid_to_template_by_title(self, open_id, title):
+        # 将用户放到模板消息发送列表中
+        user = User.query.filter_by(open_id=open_id).first()
+        if user is None:
+            user = User(open_id=open_id)
+            db.session.add(user)
+        template = Template.query.filter_by(title=title.strip()).first()
+        if template: 
+            user.templates.append(template)
+            db.session.commit()
+
+
+
+    def put_openid_to_all_template(self, openid):
+        # 将用户放到所有的模板消息发送列表中
+        user = User.query.filter_by(open_id=openid).first()
+        if user is None:
+            user = User(open_id=openid)
+            db.session.add(user)
+        for template in Template.query.all():
+            user.templates.append(template)
         db.session.commit()
 
-    @access_token_required
+
     def delete_openid_from_template(self, open_id, template_id):
         user = User.query.filter_by(open_id=open_id).first()
         if user is None:
@@ -260,6 +284,13 @@ class WeiXin:
             db.session.commit()
         except:
             db.session.rollback()
+
+    def delete_openid_from_all_template(self, open_id):
+        user = User.query.filter_by(open_id=open_id).first()
+        if user is None:
+            return
+        user.templates.clear()
+        db.session.commit()
 
     @access_token_required
     def put_tag_openid_to_template(self, tagid, template_id):
