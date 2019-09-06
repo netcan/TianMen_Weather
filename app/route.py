@@ -179,14 +179,16 @@ def template_msg_task_edit(task_id):
                                )
     elif request.method == 'POST':
         kwargs = get_template_data_from_request(request)
-        if task.status == 0:
+        if task.status == 0: # 未发送，编辑
             task.last_updated = int(time.time())
             task.data = json.dumps(WeiXin.build_template_data(task.template.content, **kwargs))
-        else:
+        else: # 已发送，新建
             new_task = Template_Task(
-                data=json.dumps(WeiXin.build_template_data(task.template.content, **kwargs))
+                data=json.dumps(WeiXin.build_template_data(task.template.content, **kwargs)),
+                create_at=time.time(),
+                last_updated=time.time(),
+                template=task.template
             )
-            new_task.template = task.template
             db.session.add(new_task)
 
         db.session.commit()
@@ -306,8 +308,13 @@ def template_msg_add_task(template_id=None):
     elif request.method == "POST":
         # print(request.form)
         kwargs = get_template_data_from_request(request)
-        task = Template_Task(data=json.dumps(WeiXin.build_template_data(template.content, **kwargs)))
-        task.template = template
+        task = Template_Task(
+            data=json.dumps(WeiXin.build_template_data(template.content, **kwargs)),
+            create_at=time.time(),
+            last_updated=time.time(),
+            template=template
+        )
+
         db.session.add(task)
         db.session.commit()
         return redirect(url_for('template_msg_task_list'))

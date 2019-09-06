@@ -9,9 +9,9 @@ if __name__ == "__main__":
     # 程序锁，防止同时运行
     if os.path.exists(config.lock_file):
         print("it's runing.")
-        sys.exit(0)
-    else:
-        open(config.lock_file, 'a').close()
+        sys.exit(-1)
+
+    open(config.lock_file, 'a').close()
 
     msg_file = None
     for file in os.listdir(config.msg_path):
